@@ -92,7 +92,7 @@ class gameEngine:
                         break
                     else:
                         if currentDiceCount == 0:
-                            currentDiceCount = 2
+                            currentDiceCount = 6
                         break
                 if self.gameOver:
                     break

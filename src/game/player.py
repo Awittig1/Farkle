@@ -20,5 +20,15 @@ class Player:
             if numPlayers < 2:
                 print("At least 2 players are required to play. Please try again.")
                 continue
-            playerNames = [input(f"Enter name for Player {i+1} : ") for i in range(numPlayers)]
+            playerNames = []
+            for i in range(numPlayers):
+                while True:
+                    name = input(f"Enter name for Player {i + 1}: ").strip()
+                    if name:
+                        playerNames.append(name)
+                        break 
+                    print("Name cannot be empty. Please try again.")
             return(playerNames)
+
+    def serialize(self) -> str:
+        return f"{self.name}:{self.score}"
