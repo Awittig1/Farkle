@@ -1,3 +1,4 @@
+# dice.py
 import random
 from collections import Counter
 from .scoring import Scoring
@@ -5,68 +6,58 @@ from .scoring import Scoring
 class Dice:
     @staticmethod
     def roll(num_dice: int = 6) -> list[int]:
-        # Roll a given number of dice and return their values.
         return [random.randint(1, 6) for _ in range(num_dice)]
 
     @staticmethod
-    def keepDice(diceList):
-        rolledCounter = Counter(diceList)
-        # Check for Farkle (no scoring dice)
-        if (
-            all(dCount < 3 for dCount in rolledCounter.values()) and
-            1 not in diceList and
-            5 not in diceList and
-            sorted(diceList) != [1,2,3,4,5,6]
-            ):
-            return (0, 6)
- 
-        endScore = 0
-        remainingDice = sorted(diceList.copy())
+    def validate_kept_dice(kept_dice: list[int], available_dice: list[int]) -> tuple[bool, str]:
+        """
+        Validate if kept dice are available and scoring
+        Returns: (is_valid: bool, message: str)
+        """
+        available_counter = Counter(available_dice)
+        kept_counter = Counter(kept_dice)
         
-        while True:
-            print("\nWhat dice would you like to keep? (Enter as space-separated values)")
-            print(f"Remaining dice to choose from: {remainingDice}")
-    
-            try:
-                keptInput = input()
-                keptDice = list(map(int, keptInput.split()))
+        # Check if all kept dice are available
+        for die, count in kept_counter.items():
+            if available_counter[die] < count:
+                return False, f"Invalid selection. Die {die} not available."
+        
+        # Check if kept dice score points
+        dice_score = Scoring.calculateScore(kept_dice)
+        if dice_score == 0:
+            return False, "Invalid selection. No scoring dice in kept selection."
+        
+        return True, "Valid selection"
 
-                # Validate that kept dice are actually in remaining dice
-                tempCounter = Counter(remainingDice)
-                for die in keptDice:
-                    if die not in tempCounter or tempCounter[die] == 0:
-                        print(f"Invalid selection. Die {die} not available.")
-                        raise ValueError("Invalid dice selection")
-                    tempCounter[die] -= 1
-                    
-                diceScore = Scoring.calculateScore(keptDice)
-                if diceScore == 0:
-                    print("Invalid selection. No scoring dice in kept selection. Please try again.")
-                    continue
-                
-                print(f"\nYou have chosen to keep: {keptDice} for a score of {diceScore}!")
-                endScore += diceScore
-                
-                # Remove kept dice from remaining dice
-                for die in keptDice:
-                    remainingDice.remove(die)
-                    
-                if not remainingDice:
-                    print("All dice kept! You get a fresh set of 6 dice next roll.")
-                    freshDice = 6
-                    return endScore, freshDice
-                print(remainingDice)
-                moreDiceCheck = input("\nWould you like to keep more dice? (y/n) : ").lower()
-                if moreDiceCheck != 'y':
-                    return endScore, len(remainingDice)
+    @staticmethod
+    def calculate_kept_score(kept_dice: list[int], available_dice: list[int]) -> tuple[int, list[int]]:
+        """
+        Calculate score for kept dice and return remaining dice
+        Returns: (score: int, remaining_dice: list[int])
+        """
+        score = Scoring.calculateScore(kept_dice)
+        remaining_dice = available_dice.copy()
+        
+        # Remove kept dice from remaining
+        for die in kept_dice:
+            remaining_dice.remove(die)
+        
+        return score, remaining_dice
 
-            except (ValueError, Exception) as e:
-                if"Invalid dice selection" not in str(e):
-                    print("Invalid input. Please enter numbers separated by spaces.")
-                continue
-            
+    @staticmethod
+    def is_farkle(dice_list: list[int]) -> bool:
+        """
+        Check if the roll is a Farkle (no scoring dice)
+        """
+        counted_roll = Counter(dice_list)
+        return (
+            all(count < 3 for count in counted_roll.values()) and
+            1 not in dice_list and
+            5 not in dice_list and
+            sorted(dice_list) != [1, 2, 3, 4, 5, 6]
+        )
+
     @staticmethod
     def update_dice_count(kept_dice_count: int) -> int:
-        # Update the number of dice to roll next time based on kept dice.
         remaining = 6 - kept_dice_count
         return remaining if remaining > 0 else 6
