@@ -2,7 +2,6 @@ import pygame
 import sys
 import os
 
-#ez find (100, 160, 210)(60, 110, 150)
 # Add the parent directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -61,7 +60,7 @@ def intro_screen(screen):
     title_font = get_font(172)
     button_font = get_font(36)
     rules_font = get_font(16)
-    copyright_font = get_font(14)  # Smaller font for copyright notice
+    copyright_font = get_font(14)
     
     # Button definitions
     button_width, button_height = 200, 60
@@ -87,7 +86,7 @@ def intro_screen(screen):
         "- If you roll and score no points, you FARKLE and lose your turn"
     ]
     
-    # Animation variables - updated for falling animation
+    # Animation variables
     screen_width = screen.get_width()
     screen_height = screen.get_height()
     
@@ -97,11 +96,11 @@ def intro_screen(screen):
     for i in range(6):
         dice_data.append({
             'x': random.randint(100, screen_width - 100),
-            'y': random.randint(-600, -100),  # Start much higher for smoother entry
-            'speed': random.uniform(60, 40),  # Slower initial speed
+            'y': random.randint(-600, -100),
+            'speed': random.uniform(60, 40),
             'angle': 0,
             'rotation_speed': random.uniform(1, 3),
-            'delay': i * 10  # Stagger the start of each die
+            'delay': i * 10
         })
     
     clock = pygame.time.Clock()
@@ -122,24 +121,17 @@ def intro_screen(screen):
         
         frame_count += 1
         
-        # Update dice animation - falling and rotation
+        # Update dice animation
         for i, die in enumerate(dice_data):
-            # Only start moving after the delay period
             if frame_count > die['delay']:
-                # Update rotation
                 die['angle'] = (die['angle'] + die['rotation_speed']) % 360
-                
-                # Update position (falling down)
                 die['y'] += die['speed']
+                die['speed'] = random.uniform(5,10)
                 
-                # Gradually increase speed for natural falling effect
-                die['speed'] = random.uniform(5,10)  # Cap at max speed
-                
-                # If dice falls below screen, reset to top
                 if die['y'] > screen_height + 100:
                     die['y'] = random.randint(-600, -100)
                     die['x'] = random.randint(100, screen_width - 100)
-                    die['speed'] = random.uniform(1, 2)  # Reset to slower speed
+                    die['speed'] = random.uniform(1, 2)
         
         # Draw everything
         screen.fill((255, 235, 219))
@@ -148,13 +140,12 @@ def intro_screen(screen):
         title_text = title_font.render("FARKLE", True, (50, 50, 150))
         screen.blit(title_text, (screen.get_width() // 2 - title_text.get_width() // 2, 50))
         
-        # Draw copyright notice in top right corner
+        # Draw copyright notice
         copyright_text = copyright_font.render("Font: Titan One by Rodrigo Fuenzalida (OFL)", True, (135, 75, 25))
         screen.blit(copyright_text, (screen.get_width() - copyright_text.get_width() - 20, 20))
         
         # Draw animated falling dice
         for i, die in enumerate(dice_data):
-            # Only draw if the die has started moving (after its delay)
             if frame_count > die['delay']:
                 rotated_dice = pygame.transform.rotate(dice[i], die['angle'])
                 new_rect = rotated_dice.get_rect(center=(die['x'] + dice[i].get_width() // 2, 
@@ -209,7 +200,7 @@ def player_count_screen(screen):
     title_font = get_font(72)
     
     clock = pygame.time.Clock()
-    selected_players = 2  # Default
+    selected_players = 2
     
     # Player count buttons (2-6 players) 
     player_buttons = []
@@ -227,12 +218,10 @@ def player_count_screen(screen):
                 return None
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # Check player count buttons
                 for button, count in player_buttons:
                     if button.collidepoint(mouse_pos):
                         selected_players = count
                 
-                # Check continue button
                 if continue_button.collidepoint(mouse_pos):
                     return selected_players
         
@@ -296,17 +285,13 @@ def player_names_screen(screen, num_players):
                 return None
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # Check input boxes
                 for box in input_boxes:
                     box["active"] = box["rect"].collidepoint(mouse_pos)
                 
-                # Check start button
                 if start_button.collidepoint(mouse_pos):
-                    # Get all player names
                     player_names = [box["text"] for box in input_boxes]
-                    # Remove empty names
                     player_names = [name for name in player_names if name.strip()]
-                    if len(player_names) >= 2:  # Need at least 2 players
+                    if len(player_names) >= 2:
                         return player_names
             
             if event.type == pygame.KEYDOWN:
@@ -317,7 +302,6 @@ def player_names_screen(screen, num_players):
                         elif event.key == pygame.K_BACKSPACE:
                             box["text"] = box["text"][:-1]
                         else:
-                            # Limit name length
                             if len(box["text"]) < 15:
                                 box["text"] += event.unicode
         
@@ -343,7 +327,6 @@ def player_names_screen(screen, num_players):
             screen.blit(text_surface, (box["rect"].x + 10, box["rect"].y + 5))
         
         # Start button
-        # Check if we have at least 2 non-empty names
         valid_names = len([box["text"] for box in input_boxes if box["text"].strip()]) >= 2
         start_color = (60, 110, 150) if (start_button.collidepoint(mouse_pos) and valid_names) else (
             (100, 160, 210) if valid_names else (150, 150, 150)
@@ -385,7 +368,7 @@ def winning_score_screen(screen):
     custom_active = False
     
     start_button = pygame.Rect(screen.get_width() // 2 - 100, 550, 200, 60)
-    selected_score = 10000  # Default
+    selected_score = 10000
     
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -395,24 +378,20 @@ def winning_score_screen(screen):
                 return None
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # Check common score buttons
                 for button, score in score_buttons:
                     if button.collidepoint(mouse_pos):
                         selected_score = score
                         custom_text = str(score)
                 
-                # Check custom input
                 if custom_input.collidepoint(mouse_pos):
                     custom_active = True
                 else:
                     custom_active = False
                 
-                # Check start button
                 if start_button.collidepoint(mouse_pos):
                     try:
                         return int(custom_text)
                     except ValueError:
-                        # If invalid, use selected_score
                         return selected_score
             
             if event.type == pygame.KEYDOWN and custom_active:
@@ -421,7 +400,6 @@ def winning_score_screen(screen):
                 elif event.key == pygame.K_BACKSPACE:
                     custom_text = custom_text[:-1]
                 else:
-                    # Only allow numbers
                     if event.unicode.isdigit() and len(custom_text) < 6:
                         custom_text += event.unicode
         
@@ -507,7 +485,7 @@ def main_game_screen(screen, player_names, winning_score):
     font = get_font(36)
     small_font = get_font(24)
     
-    # Button definitions - moved down 100 pixels
+    # Button definitions
     roll_button = pygame.Rect(100, 700, 150, 60)
     bank_button = pygame.Rect(300, 700, 150, 60)
     keep_button = pygame.Rect(500, 700, 150, 60)
@@ -537,21 +515,23 @@ def main_game_screen(screen, player_names, winning_score):
                     success = game.roll_dice()
                     if success:
                         selected_dice = []
-                        if game_state['last_action'] == 'farkle':
-                            message = "FARKLE! No points earned."
-                            message_timer = 180  # 3 seconds at 60 FPS
+                        # Check if the roll resulted in a Farkle
+                        updated_state = game.get_game_state()
+                        if updated_state['last_action'] == 'farkle':
+                            message = "FARKLE! No points earned. Turn over."
+                            message_timer = 180
                             game.next_turn()
-                    else:
-                        message = "Cannot roll dice right now."
-                        message_timer = 120
-                
+                            game_state = game.get_game_state()
+                    
                 # Bank button
                 elif bank_button.collidepoint(mouse_pos) and not game_state['game_over']:
                     if game_state['temp_score'] > 0:
                         game.bank_score()
-                        if not game_state['game_over']:
-                            game.next_turn()
                         selected_dice = []
+                        updated_state = game.get_game_state()
+                        if not updated_state['game_over']:
+                            game.next_turn()
+                            game_state = game.get_game_state()
                     else:
                         message = "No points to bank!"
                         message_timer = 120
@@ -559,14 +539,11 @@ def main_game_screen(screen, player_names, winning_score):
                 # Keep button
                 elif keep_button.collidepoint(mouse_pos) and not game_state['game_over']:
                     if selected_dice:
-                        # Convert selected indices to dice values
                         kept_dice_values = [game_state['dice_roll'][i] for i in selected_dice]
                         success = game.keep_dice(kept_dice_values)
                         if success:
-                            # Clear selected dice and update display immediately
                             selected_dice = []
-                            # The dice roll display will now show the remaining dice
-                            # from the game state
+                            game_state = game.get_game_state()
                         else:
                             message = "Invalid dice selection!"
                             message_timer = 120
@@ -574,10 +551,9 @@ def main_game_screen(screen, player_names, winning_score):
                         message = "Select dice to keep first!"
                         message_timer = 120
                 
-                # Dice selection - only allow selection if there are dice to select
+                # Dice selection
                 if game_state['dice_roll'] and not game_state['game_over']:
                     for i, die_value in enumerate(game_state['dice_roll']):
-                        # Updated dice positions to match the display positions
                         x_pos = 200 + i * 150
                         y_pos = 550
                         die_rect = pygame.Rect(x_pos, y_pos, 100, 100)
@@ -616,8 +592,7 @@ def main_game_screen(screen, player_names, winning_score):
             dice_count_text = font.render(f"Dice to roll: {game_state['current_dice_count']}", True, (135, 75, 25))
             screen.blit(dice_count_text, (600, 160))
         
-        # Draw dice - show remaining dice after keeping
-        # After keeping dice, game_state['dice_roll'] should be updated to show remaining dice
+        # Draw dice
         if game_state['dice_roll']:
             dice_label = font.render("Available Dice:", True, (30, 30, 255))
             screen.blit(dice_label, (200, 500))
@@ -627,15 +602,10 @@ def main_game_screen(screen, player_names, winning_score):
                 y_pos = 550
                 screen.blit(dice_images[die_value], (x_pos, y_pos))
                 
-                # Draw selection indicator - FIXED to properly go around the dice
+                # Draw selection indicator
                 if i in selected_dice:
-                    # Draw a border around the selected die
-                    pygame.draw.rect(screen, (255, 215, 0), (x_pos - 5, y_pos - 5, 110, 110), 4)
-                    # Optional: Add a glow effect with a semi-transparent overlay
-                    highlight = pygame.Surface((100, 100), pygame.SRCALPHA)
-                    highlight.fill((255, 215, 0, 50))  # Gold color with transparency
-                    screen.blit(highlight, (x_pos, y_pos))
-        
+                    pygame.draw.rect(screen, (135, 75, 25), (x_pos - 5, y_pos - 5, 110, 110), 4)
+
         # Draw buttons 
         button_color = (100, 160, 210)
         hover_color = (60, 110, 150)
@@ -677,7 +647,7 @@ def main_game_screen(screen, player_names, winning_score):
         
         pygame.display.flip()
         clock.tick(60)
-             
+                  
 def winner_screen(screen, winner, scores):
     """Display winner screen"""
     font = get_font(72)
@@ -701,13 +671,13 @@ def winner_screen(screen, winner, scores):
         screen.fill((255, 235, 219))
         
         # Winner announcement
-        winner_text = font.render(f"{winner} WINS!", True, (50, 150, 50))
+        winner_text = font.render(f"{winner} WINS!", True, (50, 50, 150))
         screen.blit(winner_text, (screen.get_width() // 2 - winner_text.get_width() // 2, 100))
         
         # Final scores
         y_offset = 200
         for i, (name, score) in enumerate(scores.items()):
-            color = (50, 150, 50) if name == winner else (30, 30, 30)
+            color = (50, 50, 150) if name == winner else (30, 30, 30)
             score_text = small_font.render(f"{name}: {score} points", True, color)
             screen.blit(score_text, (screen.get_width() // 2 - score_text.get_width() // 2, y_offset + i * 50))
         
@@ -729,31 +699,25 @@ def run_pygame():
     
     # Main game loop that allows returning to main menu
     while True:
-        # Run intro screen
         result = intro_screen(screen)
         
         if result == "quit":
-            break  # Exit the loop and quit the game
+            break
             
         if result == "play":
-            # Get number of players
             num_players = player_count_screen(screen)
             if num_players is None:
                 break
 
-            # Get player names
             player_names = player_names_screen(screen, num_players)
             if player_names is None:
                 break
 
-            # Get winning score
             winning_score = winning_score_screen(screen)
             if winning_score is None:
                 break
 
-            # Run main game
             main_game_screen(screen, player_names, winning_score)
-            # After main game finishes, the loop continues and goes back to intro screen
     
     pygame.quit()
 
