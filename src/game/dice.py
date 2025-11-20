@@ -1,4 +1,3 @@
-# dice.py
 import random
 from collections import Counter
 from .scoring import Scoring

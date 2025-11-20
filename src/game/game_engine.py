@@ -1,4 +1,3 @@
-# game_engine.py
 from .player import Player
 from .dice import Dice
 from .scoring import Scoring
@@ -61,8 +60,6 @@ class gameEngine:
         """Validate if kept dice selection is valid"""
         return Dice.validate_kept_dice(kept_dice, self.state.remaining_dice)
     
-# In your game_engine.py, update the keep_dice method:
-
     def keep_dice(self, kept_dice: list[int]) -> bool:
         """Keep selected dice and update score"""
         is_valid, message = self.validate_keep_dice(kept_dice)
@@ -77,18 +74,6 @@ class gameEngine:
         
         # Update the dice_roll to show only remaining dice
         self.state.dice_roll = self.state.remaining_dice.copy()
-        
-        # If all dice kept, reset to 6
-        if self.state.current_dice_count == 0:
-            self.state.current_dice_count = 6
-            
-        return True
-            
-        roll_score, new_remaining = Dice.calculate_kept_score(kept_dice, self.state.remaining_dice)
-        self.state.temp_score += roll_score
-        self.state.remaining_dice = new_remaining
-        self.state.current_dice_count = len(self.state.remaining_dice)
-        self.state.last_action = "keep"
         
         # If all dice kept, reset to 6
         if self.state.current_dice_count == 0:

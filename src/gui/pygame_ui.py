@@ -1,360 +1,761 @@
 import pygame
 import sys
-from ..game.game_engine import gameEngine
-from ..game.player import Player
-from ..game.dice import Dice
-from ..game.scoring import Scoring
-from .components.dice_renderer import DiceRenderer
-from .components.buttons import Button
+import os
 
-class PyGameUI:
-    def __init__(self):
-        pygame.init()
-        self.screen_width = 1200
-        self.screen_height = 800
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-        pygame.display.set_caption("Farkle Game - Mouse Controlled")
-        
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.Font(None, 36)
-        self.small_font = pygame.font.Font(None, 24)
-        self.game_engine = None
-        self.current_state = "PLAYER_SETUP"
-        self.dice_renderer = DiceRenderer()
-        
-        # Game state
-        self.selected_dice = []
-        self.current_roll = []
-        self.turn_score = 0
-        self.current_dice_count = 6
-        
-        # UI Elements
-        self.buttons = {}
-        self.setup_buttons()
-        
-        # Player setup
-        self.player_names = []
-        self.current_player_input = ""
-        self.setup_active = True
-        
-    def setup_buttons(self):
-        """Initialize all clickable buttons"""
-        button_style = {
-            'width': 200,
-            'height': 50,
-            'color': (70, 130, 180),
-            'hover_color': (100, 160, 210),
-            'text_color': (255, 255, 255),
-            'font': self.font
-        }
-        
-        # Gameplay buttons
-        self.buttons['roll'] = Button(
-            x=800, y=500, 
-            text="Roll Dice", 
-            **button_style
-        )
-        
-        self.buttons['bank'] = Button(
-            x=800, y=570,
-            text="Bank Score", 
-            **button_style
-        )
-        
-        self.buttons['save'] = Button(
-            x=800, y=640,
-            text="Save Game",
-            **button_style
-        )
-        
-        # Player setup buttons
-        self.buttons['add_player'] = Button(
-            x=500, y=400,
-            text="Add Player",
-            **button_style
-        )
-        
-        self.buttons['start_game'] = Button(
-            x=500, y=480,
-            text="Start Game",
-            **button_style
-        )
+#ez find (100, 160, 210)(60, 110, 150)
+# Add the parent directory to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from game.game_engine import gameEngine
+from game.dice import Dice
+
+# Initialize PyGame and load font
+pygame.init()
+
+try:
+    whatFont = pygame.font.Font("src/gui/components/fonts/TitanOne-Regular.ttf", 36)
+except:
+    print("Custom font not found, using system font")
+    whatFont = None
+
+print("Using font:", whatFont)
+
+def get_font(size):
+    """Helper function to get font with proper handling of None"""
+    if whatFont:
+        try:
+            return pygame.font.Font("src/gui/components/fonts/TitanOne-Regular.ttf", size)
+        except:
+            return pygame.font.SysFont(None, size)
+    else:
+        return pygame.font.SysFont(None, size)
+
+def intro_screen(screen):
+    # Load dice images
+    try:
+        d1 = pygame.image.load("src/gui/components/pictures/die_1.png")
+        d1 = pygame.transform.scale(d1, (d1.get_width() / 2.5, d1.get_height() / 2.5))
+        d2 = pygame.image.load("src/gui/components/pictures/die_2.png")
+        d2 = pygame.transform.scale(d2, (d2.get_width() / 2.5, d2.get_height() / 2.5))
+        d3 = pygame.image.load("src/gui/components/pictures/die_3.png")
+        d3 = pygame.transform.scale(d3, (d3.get_width() / 2.5, d3.get_height() / 2.5))
+        d4 = pygame.image.load("src/gui/components/pictures/die_4.png")
+        d4 = pygame.transform.scale(d4, (d4.get_width() / 2.5, d4.get_height() / 2.5))
+        d5 = pygame.image.load("src/gui/components/pictures/die_5.png")
+        d5 = pygame.transform.scale(d5, (d5.get_width() / 2.5, d5.get_height() / 2.5))
+        d6 = pygame.image.load("src/gui/components/pictures/die_6.png")
+        d6 = pygame.transform.scale(d6, (d6.get_width() / 2.5, d6.get_height() / 2.5))
+    except:
+        # Placeholder dice if images can't be loaded
+        dice_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), 
+                      (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+        dice = []
+        for color in dice_colors:
+            die = pygame.Surface((80, 80))
+            die.fill(color)
+            dice.append(die)
+    else:
+        dice = [d1, d2, d3, d4, d5, d6]
     
-    def run(self):
-        """Main game loop"""
-        running = True
-        while running:
-            mouse_pos = pygame.mouse.get_pos()
+    # Font setup
+    title_font = get_font(172)
+    button_font = get_font(36)
+    rules_font = get_font(16)
+    copyright_font = get_font(14)  # Smaller font for copyright notice
+    
+    # Button definitions
+    button_width, button_height = 200, 60
+    button_x = screen.get_width() // 2 - button_width // 2
+    
+    play_button = pygame.Rect(button_x, 380, button_width, button_height)
+    rules_button = pygame.Rect(button_x, 460, button_width, button_height)
+    quit_button = pygame.Rect(button_x, 540, button_width, button_height)
+    
+    # Rules text
+    rules_text = [
+        "Farkle Rules:",
+        "- Roll 6 dice to start",
+        "- Combine groups of 3-6 of a kind",
+        "- 1s = 100 pts, 5s = 50 pts by themselves",
+        "- Three 1s = 1000 pts, three of a kind = 100 x face value",
+        "- A straight (1-6) = 1500 pts",
+        "- Four Pair = Three pair x 2 pts",
+        "- Five Pair = Three pair x 2 pts",
+        "- Six Pair = Three pair x 2 pts",
+        "- Two sets of three = 2500 pts",
+        "- You can bank your points or risk rolling again",
+        "- If you roll and score no points, you FARKLE and lose your turn"
+    ]
+    
+    # Animation variables - updated for falling animation
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+    
+    # Initialize dice with staggered starting positions
+    import random
+    dice_data = []
+    for i in range(6):
+        dice_data.append({
+            'x': random.randint(100, screen_width - 100),
+            'y': random.randint(-600, -100),  # Start much higher for smoother entry
+            'speed': random.uniform(60, 40),  # Slower initial speed
+            'angle': 0,
+            'rotation_speed': random.uniform(1, 3),
+            'delay': i * 10  # Stagger the start of each die
+        })
+    
+    clock = pygame.time.Clock()
+    frame_count = 0
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit"
             
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_click(event.pos, event.button)
-                elif event.type == pygame.KEYDOWN and self.current_state == "PLAYER_SETUP":
-                    self.handle_player_input(event)
-            
-            # Update button hover states
-            for button in self.buttons.values():
-                button.update_hover(mouse_pos)
-            
-            self.render()
-            self.clock.tick(60)
-            
-        pygame.quit()
-        sys.exit()
-    
-    def handle_click(self, pos, button):
-        """Handle all mouse clicks in the game"""
-        if button != 1:  # Only left clicks
-            return
-            
-        if self.current_state == "PLAYER_SETUP":
-            self.handle_setup_click(pos)
-        elif self.current_state == "PLAYING":
-            self.handle_gameplay_click(pos)
-        elif self.current_state == "GAME_OVER":
-            self.handle_gameover_click(pos)
-    
-    def handle_setup_click(self, pos):
-        """Handle clicks during player setup"""
-        if self.buttons['add_player'].is_clicked(pos) and self.current_player_input.strip():
-            self.player_names.append(self.current_player_input.strip())
-            self.current_player_input = ""
-            print(f"Added player: {self.player_names[-1]}")
-            
-        elif self.buttons['start_game'].is_clicked(pos) and len(self.player_names) >= 2:
-            self.start_game()
-    
-    def handle_gameplay_click(self, pos):
-        """Handle clicks during gameplay"""
-        # Check dice selection
-        if self.current_roll:
-            hovered_die = self.dice_renderer.render_dice(
-                self.screen, self.current_roll, self.selected_dice, pos, 100, 300
-            )
-            if hovered_die is not None:
-                self.toggle_dice_selection(hovered_die)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_button.collidepoint(mouse_pos):
+                    return "play"
+                elif quit_button.collidepoint(mouse_pos):
+                    return "quit"
         
-        # Check button clicks
-        if self.buttons['roll'].is_clicked(pos):
-            self.roll_dice()
-            
-        elif self.buttons['bank'].is_clicked(pos) and self.selected_dice:
-            self.bank_score()
-            
-        elif self.buttons['save'].is_clicked(pos):
-            self.save_game()
-    
-    def handle_gameover_click(self, pos):
-        """Handle clicks on game over screen"""
-        # Could add "Play Again" or "Quit" buttons here
-        pass
-    
-    def handle_player_input(self, event):
-        """Handle keyboard input for player names during setup"""
-        if event.key == pygame.K_RETURN and self.current_player_input.strip():
-            self.player_names.append(self.current_player_input.strip())
-            self.current_player_input = ""
-        elif event.key == pygame.K_BACKSPACE:
-            self.current_player_input = self.current_player_input[:-1]
-        else:
-            self.current_player_input += event.unicode
-    
-    def toggle_dice_selection(self, die_index):
-        """Toggle selection of a die"""
-        if die_index in self.selected_dice:
-            self.selected_dice.remove(die_index)
-        else:
-            self.selected_dice.append(die_index)
+        frame_count += 1
         
-        # Auto-calculate potential score
-        self.calculate_potential_score()
-    
-    def calculate_potential_score(self):
-        """Calculate score for currently selected dice"""
-        if self.selected_dice and self.current_roll:
-            selected_values = [self.current_roll[i] for i in self.selected_dice]
-            self.turn_score = Scoring.calculateScore(selected_values)
-        else:
-            self.turn_score = 0
-    
-    def roll_dice(self):
-        """Handle dice roll with mouse control"""
-        if not self.game_engine or self.game_engine.gameOver:
-            return
-            
-        # Use your existing dice logic
-        self.current_roll = Dice.roll(self.current_dice_count)
-        self.selected_dice = []
-        self.turn_score = 0
+        # Update dice animation - falling and rotation
+        for i, die in enumerate(dice_data):
+            # Only start moving after the delay period
+            if frame_count > die['delay']:
+                # Update rotation
+                die['angle'] = (die['angle'] + die['rotation_speed']) % 360
+                
+                # Update position (falling down)
+                die['y'] += die['speed']
+                
+                # Gradually increase speed for natural falling effect
+                die['speed'] = random.uniform(5,10)  # Cap at max speed
+                
+                # If dice falls below screen, reset to top
+                if die['y'] > screen_height + 100:
+                    die['y'] = random.randint(-600, -100)
+                    die['x'] = random.randint(100, screen_width - 100)
+                    die['speed'] = random.uniform(1, 2)  # Reset to slower speed
         
-        print(f"Rolled: {self.current_roll}")
+        # Draw everything
+        screen.fill((255, 235, 219))
         
-        # Check for Farkle
-        if self.is_farkle(self.current_roll):
-            print("Farkle! Turn over.")
-            self.farkle_penalty()
-    
-    def bank_score(self):
-        """Bank the current turn's score"""
-        if self.turn_score > 0 and self.game_engine:
-            current_player = self.game_engine.players[self.game_engine.current_player_index]
-            current_player.addScore(self.turn_score)
-            
-            print(f"{current_player.name} banked {self.turn_score} points! Total: {current_player.score}")
-            
-            # Check win condition
-            if current_player.score >= self.game_engine.winningScore:
-                self.current_state = "GAME_OVER"
-                return
-            
-            # Reset for next turn
-            self.next_turn()
-    
-    def farkle_penalty(self):
-        """Handle Farkle penalty"""
-        self.turn_score = 0
-        self.current_roll = []
-        self.selected_dice = []
-        self.next_turn()
-    
-    def next_turn(self):
-        """Move to next player's turn"""
-        if self.game_engine:
-            self.game_engine.current_player_index = (
-                self.game_engine.current_player_index + 1
-            ) % len(self.game_engine.players)
-            self.current_dice_count = 6
-            self.current_roll = []
-            self.selected_dice = []
-            self.turn_score = 0
-    
-    def start_game(self):
-        """Start the main game"""
-        self.game_engine = gameEngine(self.player_names)
-        self.current_state = "PLAYING"
-        print("Game started!")
-    
-    def save_game(self):
-        """Save game state"""
-        if self.game_engine:
-            print("Save game feature to be implemented")
-            # Integrate with your existing save system
-    
-    def is_farkle(self, dice_roll):
-        """Use your existing Farkle detection"""
-        from collections import Counter
-        counted_roll = Counter(dice_roll)
+        # Draw title
+        title_text = title_font.render("FARKLE", True, (50, 50, 150))
+        screen.blit(title_text, (screen.get_width() // 2 - title_text.get_width() // 2, 50))
         
-        return (
-            all(count < 3 for count in counted_roll.values()) and
-            1 not in dice_roll and
-            5 not in dice_roll and
-            sorted(dice_roll) != [1, 2, 3, 4, 5, 6]
-        )
-    
-    def render(self):
-        """Render the entire game UI"""
-        self.screen.fill((25, 25, 40))  # Dark background
+        # Draw copyright notice in top right corner
+        copyright_text = copyright_font.render("Font: Titan One by Rodrigo Fuenzalida (OFL)", True, (135, 75, 25))
+        screen.blit(copyright_text, (screen.get_width() - copyright_text.get_width() - 20, 20))
         
-        if self.current_state == "PLAYER_SETUP":
-            self.render_player_setup()
-        elif self.current_state == "PLAYING":
-            self.render_gameplay()
-        elif self.current_state == "GAME_OVER":
-            self.render_game_over()
+        # Draw animated falling dice
+        for i, die in enumerate(dice_data):
+            # Only draw if the die has started moving (after its delay)
+            if frame_count > die['delay']:
+                rotated_dice = pygame.transform.rotate(dice[i], die['angle'])
+                new_rect = rotated_dice.get_rect(center=(die['x'] + dice[i].get_width() // 2, 
+                                                        die['y'] + dice[i].get_height() // 2))
+                screen.blit(rotated_dice, new_rect.topleft)
+        
+        # Draw buttons with hover effects
+        button_color = (100, 160, 210)
+        hover_color = (60, 110, 150)
+        
+        # Play button
+        play_color = hover_color if play_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, play_color, play_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), play_button, 2, border_radius=10)
+        play_text = button_font.render("Play", True, (255, 255, 255))
+        screen.blit(play_text, (play_button.centerx - play_text.get_width() // 2, 
+                               play_button.centery - play_text.get_height() // 2))
+        
+        # Rules button
+        rules_color = hover_color if rules_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, rules_color, rules_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), rules_button, 2, border_radius=10)
+        rules_button_text = button_font.render("Rules", True, (255, 255, 255))
+        screen.blit(rules_button_text, (rules_button.centerx - rules_button_text.get_width() // 2, 
+                                       rules_button.centery - rules_button_text.get_height() // 2))
+        
+        # Quit button
+        quit_color = hover_color if quit_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, quit_color, quit_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), quit_button, 2, border_radius=10)
+        quit_text = button_font.render("Quit", True, (255, 255, 255))
+        screen.blit(quit_text, (quit_button.centerx - quit_text.get_width() // 2, 
+                               quit_button.centery - quit_text.get_height() // 2))
+        
+        # Show rules if hovering over rules button
+        if rules_button.collidepoint(mouse_pos):
+            rules_bg = pygame.Rect(40, 550, 575, 230)
+            pygame.draw.rect(screen, (255, 255, 255), rules_bg, border_radius=10)
+            pygame.draw.rect(screen, (30, 30, 30), rules_bg, 2, border_radius=10)
+            
+            for i, line in enumerate(rules_text):
+                rules_line = rules_font.render(line, True, (30, 30, 30))
+                screen.blit(rules_line, (rules_bg.x + 10, rules_bg.y + 15 + i * 17))
         
         pygame.display.flip()
+        clock.tick(60)
+
+def player_count_screen(screen):
+    """Screen to select number of players"""
+    font = get_font(48)
+    button_font = get_font(36)
+    title_font = get_font(72)
     
-    def render_player_setup(self):
-        """Render player setup screen"""
-        title = self.font.render("Farkle Game - Add Players", True, (255, 255, 255))
-        self.screen.blit(title, (self.screen_width//2 - title.get_width()//2, 100))
-        
-        # Current input
-        input_text = self.font.render(f"Player Name: {self.current_player_input}", True, (200, 200, 200))
-        self.screen.blit(input_text, (400, 300))
-        
-        # Player list
-        players_text = self.small_font.render("Players:", True, (255, 255, 255))
-        self.screen.blit(players_text, (400, 350))
-        
-        for i, name in enumerate(self.player_names):
-            player_display = self.small_font.render(f"{i+1}. {name}", True, (180, 180, 255))
-            self.screen.blit(player_display, (420, 380 + i * 25))
-        
-        # Render setup buttons
-        self.buttons['add_player'].render(self.screen)
-        self.buttons['start_game'].render(self.screen)
-        
-        # Instructions
-        instructions = [
-            "Click 'Add Player' to add current name",
-            "Need at least 2 players to start",
-            "Press Enter to quickly add player"
-        ]
-        
-        for i, instruction in enumerate(instructions):
-            text = self.small_font.render(instruction, True, (150, 150, 150))
-            self.screen.blit(text, (400, 550 + i * 25))
+    clock = pygame.time.Clock()
+    selected_players = 2  # Default
     
-    def render_gameplay(self):
-        """Render main gameplay screen"""
-        if not self.game_engine:
-            return
+    # Player count buttons (2-6 players) 
+    player_buttons = []
+    for i in range(2, 7):
+        button = pygame.Rect(400 + (i-2) * 120, 300, 80, 80)
+        player_buttons.append((button, i))
+    
+    continue_button = pygame.Rect(screen.get_width() // 2 - 100, 500, 200, 60)
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None
             
-        current_player = self.game_engine.players[self.game_engine.current_player_index]
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Check player count buttons
+                for button, count in player_buttons:
+                    if button.collidepoint(mouse_pos):
+                        selected_players = count
+                
+                # Check continue button
+                if continue_button.collidepoint(mouse_pos):
+                    return selected_players
         
-        # Player info
-        self.render_text(f"Current Player: {current_player.name}", 50, 50, (255, 255, 255))
-        self.render_text(f"Total Score: {current_player.score}", 50, 90, (200, 200, 100))
-        self.render_text(f"Winning Score: {self.game_engine.winningScore}", 50, 130, (180, 180, 255))
+        # Draw
+        screen.fill((255, 235, 219))
         
-        # Turn info
-        self.render_text(f"Turn Score: {self.turn_score}", 50, 180, (100, 255, 100) if self.turn_score > 0 else (255, 100, 100))
-        self.render_text(f"Dice to roll: {self.current_dice_count}", 50, 220, (200, 200, 200))
+        # Title
+        title = title_font.render("Select Players", True, (50, 50, 150))
+        screen.blit(title, (screen.get_width() // 2 - title.get_width() // 2, 100))
         
-        # Render dice
-        if self.current_roll:
-            mouse_pos = pygame.mouse.get_pos()
-            self.dice_renderer.render_dice(
-                self.screen, self.current_roll, self.selected_dice, mouse_pos, 100, 300
-            )
+        # Instruction
+        instruction = font.render("How many players?", True, (30, 30, 30))
+        screen.blit(instruction, (screen.get_width() // 2 - instruction.get_width() // 2, 200))
         
-        # Render buttons
-        self.buttons['roll'].render(self.screen)
-        self.buttons['bank'].render(self.screen)
-        self.buttons['save'].render(self.screen)
-        
-        # Instructions
-        instructions = [
-            "Click dice to select/deselect",
-            "Click Roll to roll remaining dice",
-            "Click Bank to score points",
-            "Click Save to save game"
-        ]
-        
-        for i, instruction in enumerate(instructions):
-            text = self.small_font.render(instruction, True, (150, 150, 150))
-            self.screen.blit(text, (800, 350 + i * 25))
-    
-    def render_game_over(self):
-        """Render game over screen"""
-        if self.game_engine:
-            winner = max(self.game_engine.players, key=lambda p: p.score)
-            win_text = self.font.render(f"🎉 {winner.name} Wins! 🎉", True, (255, 215, 0))
-            score_text = self.font.render(f"Final Score: {winner.score} points", True, (255, 255, 255))
+        # Player count buttons
+        for button, count in player_buttons:
+            color = (60, 110, 150) if count == selected_players else (100, 160, 210)
+            pygame.draw.rect(screen, color, button, border_radius=10)
+            pygame.draw.rect(screen, (30, 30, 30), button, 2, border_radius=10)
             
-            self.screen.blit(win_text, (self.screen_width//2 - win_text.get_width()//2, 300))
-            self.screen.blit(score_text, (self.screen_width//2 - score_text.get_width()//2, 350))
+            count_text = font.render(str(count), True, (255, 255, 255))
+            screen.blit(count_text, (button.centerx - count_text.get_width() // 2, 
+                                   button.centery - count_text.get_height() // 2))
+        
+        # Continue button 
+        continue_color = (60, 110, 150) if continue_button.collidepoint(mouse_pos) else (100, 160, 210)
+        pygame.draw.rect(screen, continue_color, continue_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), continue_button, 2, border_radius=10)
+        continue_text = button_font.render("Continue", True, (255, 255, 255))
+        screen.blit(continue_text, (continue_button.centerx - continue_text.get_width() // 2, 
+                                   continue_button.centery - continue_text.get_height() // 2))
+        
+        pygame.display.flip()
+        clock.tick(60)
+
+def player_names_screen(screen, num_players):
+    """Screen to enter player names"""
+    title_font = get_font(72)
+    font = get_font(36)
+    input_font = get_font(32)
     
-    def render_text(self, text, x, y, color):
-        """Helper for rendering text"""
-        surface = self.font.render(text, True, color)
-        self.screen.blit(surface, (x, y))
+    clock = pygame.time.Clock()
+    
+    # Create input boxes
+    input_boxes = []
+    for i in range(num_players):
+        input_box = pygame.Rect(400, 200 + i * 70, 400, 50)
+        input_boxes.append({"rect": input_box, "text": f"Player {i+1}", "active": False})
+    
+    start_button = pygame.Rect(screen.get_width() // 2 - 100, 650, 200, 60)
+    
+    # Activate first input box
+    if input_boxes:
+        input_boxes[0]["active"] = True
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Check input boxes
+                for box in input_boxes:
+                    box["active"] = box["rect"].collidepoint(mouse_pos)
+                
+                # Check start button
+                if start_button.collidepoint(mouse_pos):
+                    # Get all player names
+                    player_names = [box["text"] for box in input_boxes]
+                    # Remove empty names
+                    player_names = [name for name in player_names if name.strip()]
+                    if len(player_names) >= 2:  # Need at least 2 players
+                        return player_names
+            
+            if event.type == pygame.KEYDOWN:
+                for box in input_boxes:
+                    if box["active"]:
+                        if event.key == pygame.K_RETURN:
+                            box["active"] = False
+                        elif event.key == pygame.K_BACKSPACE:
+                            box["text"] = box["text"][:-1]
+                        else:
+                            # Limit name length
+                            if len(box["text"]) < 15:
+                                box["text"] += event.unicode
+        
+        # Draw
+        screen.fill((255, 235, 219))
+        
+        # Title
+        title = title_font.render("Enter Player Names", True, (50, 50, 150))
+        screen.blit(title, (screen.get_width() // 2 - title.get_width() // 2, 50))
+        
+        # Input boxes
+        for i, box in enumerate(input_boxes):
+            color = (255, 255, 255) if box["active"] else (200, 200, 200)
+            pygame.draw.rect(screen, color, box["rect"], border_radius=5)
+            pygame.draw.rect(screen, (30, 30, 30), box["rect"], 2, border_radius=5)
+            
+            # Player label
+            label = font.render(f"Player {i+1}:", True, (30, 30, 30))
+            screen.blit(label, (box["rect"].x - 175, box["rect"].y + 5))
+            
+            # Text
+            text_surface = input_font.render(box["text"], True, (30, 30, 30))
+            screen.blit(text_surface, (box["rect"].x + 10, box["rect"].y + 5))
+        
+        # Start button
+        # Check if we have at least 2 non-empty names
+        valid_names = len([box["text"] for box in input_boxes if box["text"].strip()]) >= 2
+        start_color = (60, 110, 150) if (start_button.collidepoint(mouse_pos) and valid_names) else (
+            (100, 160, 210) if valid_names else (150, 150, 150)
+        )
+        
+        pygame.draw.rect(screen, start_color, start_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), start_button, 2, border_radius=10)
+        start_text = font.render("Start", True, (255, 255, 255))
+        screen.blit(start_text, (start_button.centerx - start_text.get_width() // 2, 
+                               start_button.centery - start_text.get_height() // 2))
+        
+        # Instruction
+        if not valid_names:
+            instruction = font.render("Enter at least 2 player names", True, (200, 0, 0))
+            screen.blit(instruction, (screen.get_width() // 2 - instruction.get_width() // 2, 450))
+        
+        pygame.display.flip()
+        clock.tick(60)
+
+def winning_score_screen(screen):
+    """Screen to select winning score"""
+    title_font = get_font(72)
+    font = get_font(36)
+    input_font = get_font(32)
+    
+    clock = pygame.time.Clock()
+    
+    # Common winning scores
+    common_scores = [5000, 10000, 15000, 20000]
+    score_buttons = []
+    
+    for i, score in enumerate(common_scores):
+        button = pygame.Rect(300 + i * 200, 300, 150, 80)
+        score_buttons.append((button, score))
+    
+    # Custom score input
+    custom_input = pygame.Rect(600, 450, 200, 50)
+    custom_text = "10000"
+    custom_active = False
+    
+    start_button = pygame.Rect(screen.get_width() // 2 - 100, 550, 200, 60)
+    selected_score = 10000  # Default
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Check common score buttons
+                for button, score in score_buttons:
+                    if button.collidepoint(mouse_pos):
+                        selected_score = score
+                        custom_text = str(score)
+                
+                # Check custom input
+                if custom_input.collidepoint(mouse_pos):
+                    custom_active = True
+                else:
+                    custom_active = False
+                
+                # Check start button
+                if start_button.collidepoint(mouse_pos):
+                    try:
+                        return int(custom_text)
+                    except ValueError:
+                        # If invalid, use selected_score
+                        return selected_score
+            
+            if event.type == pygame.KEYDOWN and custom_active:
+                if event.key == pygame.K_RETURN:
+                    custom_active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    custom_text = custom_text[:-1]
+                else:
+                    # Only allow numbers
+                    if event.unicode.isdigit() and len(custom_text) < 6:
+                        custom_text += event.unicode
+        
+        # Draw
+        screen.fill((255, 235, 219))
+        
+        # Title
+        title = title_font.render("Select Winning Score", True, (50, 50, 150))
+        screen.blit(title, (screen.get_width() // 2 - title.get_width() // 2, 100))
+        
+        # Instruction
+        instruction = font.render("Choose a winning score or enter custom:", True, (30, 30, 30))
+        screen.blit(instruction, (screen.get_width() // 2 - instruction.get_width() // 2, 200))
+        
+        # Common score buttons 
+        for button, score in score_buttons:
+            color = (60, 110, 150) if score == selected_score else (100, 160, 210)
+            pygame.draw.rect(screen, color, button, border_radius=10)
+            pygame.draw.rect(screen, (30, 30, 30), button, 2, border_radius=10)
+            
+            score_text = font.render(str(score), True, (255, 255, 255))
+            screen.blit(score_text, (button.centerx - score_text.get_width() // 2, 
+                                   button.centery - score_text.get_height() // 2))
+        
+        # Custom input
+        custom_color = (255, 255, 255) if custom_active else (200, 200, 200)
+        pygame.draw.rect(screen, custom_color, custom_input, border_radius=5)
+        pygame.draw.rect(screen, (30, 30, 30), custom_input, 2, border_radius=5)
+        
+        custom_label = font.render("Custom:", True, (30, 30, 30))
+        screen.blit(custom_label, (custom_input.x - 175, custom_input.y + 5))
+        
+        custom_text_surface = input_font.render(custom_text, True, (30, 30, 30))
+        screen.blit(custom_text_surface, (custom_input.x + 10, custom_input.y + 5))
+        
+        # Start button
+        start_color =  (60, 110, 150) if start_button.collidepoint(mouse_pos) else (100, 160, 210)
+        pygame.draw.rect(screen, start_color, start_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), start_button, 2, border_radius=10)
+        start_text = font.render("Start", True, (255, 255, 255))
+        screen.blit(start_text, (start_button.centerx - start_text.get_width() // 2, 
+                               start_button.centery - start_text.get_height() // 2))
+        
+        pygame.display.flip()
+        clock.tick(60)
+
+def main_game_screen(screen, player_names, winning_score):
+    """Main game screen that handles the actual Farkle gameplay"""
+    # Initialize game engine
+    game = gameEngine(player_names, winning_score)
+    game.start_game()
+    game.next_turn()
+    
+    # Load dice images
+    dice_images = {}
+    try:
+        for i in range(1, 7):
+            img = pygame.image.load(f"src/gui/components/pictures/die_{i}.png")
+            img = pygame.transform.scale(img, (100, 100))
+            dice_images[i] = img
+    except:
+        # Create placeholder dice
+        dice_colors = {
+            1: (255, 0, 0),    # Red
+            2: (0, 255, 0),    # Green  
+            3: (0, 0, 255),    # Blue
+            4: (255, 255, 0),  # Yellow
+            5: (255, 0, 255),  # Magenta
+            6: (0, 255, 255)   # Cyan
+        }
+        for i in range(1, 7):
+            die = pygame.Surface((80, 80))
+            die.fill(dice_colors[i])
+            # Add number to placeholder
+            font = get_font(48)
+            text = font.render(str(i), True, (0, 0, 0))
+            text_rect = text.get_rect(center=(40, 40))
+            die.blit(text, text_rect)
+            dice_images[i] = die
+    
+    # Font setup
+    title_font = get_font(48)
+    font = get_font(36)
+    small_font = get_font(24)
+    
+    # Button definitions - moved down 100 pixels
+    roll_button = pygame.Rect(100, 700, 150, 60)
+    bank_button = pygame.Rect(300, 700, 150, 60)
+    keep_button = pygame.Rect(500, 700, 150, 60)
+    
+    # Game state
+    selected_dice = []
+    message = ""
+    message_timer = 0
+    
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        game_state = game.get_game_state()
+        current_player = game_state['current_player']
+        
+        # Handle events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                
+                # Roll button
+                if roll_button.collidepoint(mouse_pos) and not game_state['game_over']:
+                    success = game.roll_dice()
+                    if success:
+                        selected_dice = []
+                        if game_state['last_action'] == 'farkle':
+                            message = "FARKLE! No points earned."
+                            message_timer = 180  # 3 seconds at 60 FPS
+                            game.next_turn()
+                    else:
+                        message = "Cannot roll dice right now."
+                        message_timer = 120
+                
+                # Bank button
+                elif bank_button.collidepoint(mouse_pos) and not game_state['game_over']:
+                    if game_state['temp_score'] > 0:
+                        game.bank_score()
+                        if not game_state['game_over']:
+                            game.next_turn()
+                        selected_dice = []
+                    else:
+                        message = "No points to bank!"
+                        message_timer = 120
+                
+                # Keep button
+                elif keep_button.collidepoint(mouse_pos) and not game_state['game_over']:
+                    if selected_dice:
+                        # Convert selected indices to dice values
+                        kept_dice_values = [game_state['dice_roll'][i] for i in selected_dice]
+                        success = game.keep_dice(kept_dice_values)
+                        if success:
+                            # Clear selected dice and update display immediately
+                            selected_dice = []
+                            # The dice roll display will now show the remaining dice
+                            # from the game state
+                        else:
+                            message = "Invalid dice selection!"
+                            message_timer = 120
+                    else:
+                        message = "Select dice to keep first!"
+                        message_timer = 120
+                
+                # Dice selection - only allow selection if there are dice to select
+                if game_state['dice_roll'] and not game_state['game_over']:
+                    for i, die_value in enumerate(game_state['dice_roll']):
+                        # Updated dice positions to match the display positions
+                        x_pos = 200 + i * 150
+                        y_pos = 550
+                        die_rect = pygame.Rect(x_pos, y_pos, 100, 100)
+                        if die_rect.collidepoint(mouse_pos):
+                            if i in selected_dice:
+                                selected_dice.remove(i)
+                            else:
+                                selected_dice.append(i)
+        
+        # Update message timer
+        if message_timer > 0:
+            message_timer -= 1
+        
+        # Draw everything
+        screen.fill((255, 235, 219))
+        
+        # Draw title and game info
+        title_text = title_font.render("FARKLE", True, (50, 50, 150))
+        screen.blit(title_text, (screen.get_width() // 2 - title_text.get_width() // 2, 20))
+        
+        # Draw player scores
+        y_offset = 80
+        for i, (name, score) in enumerate(game_state['scores'].items()):
+            color = (60, 110, 200) if name == current_player.name else (120, 180, 230)
+            score_text = font.render(f"{name}: {score} points", True, color)
+            screen.blit(score_text, (50, y_offset + i * 40))
+        
+        # Draw current turn info
+        if current_player:
+            turn_text = font.render(f"Current Player: {current_player.name}", True, (135, 75, 25))
+            screen.blit(turn_text, (600, 80))
+            
+            temp_score_text = font.render(f"Turn Score: {game_state['temp_score']}", True, (135, 75, 25))
+            screen.blit(temp_score_text, (600, 120))
+            
+            dice_count_text = font.render(f"Dice to roll: {game_state['current_dice_count']}", True, (135, 75, 25))
+            screen.blit(dice_count_text, (600, 160))
+        
+        # Draw dice - show remaining dice after keeping
+        # After keeping dice, game_state['dice_roll'] should be updated to show remaining dice
+        if game_state['dice_roll']:
+            dice_label = font.render("Available Dice:", True, (30, 30, 255))
+            screen.blit(dice_label, (200, 500))
+            
+            for i, die_value in enumerate(game_state['dice_roll']):
+                x_pos = 200 + i * 150
+                y_pos = 550
+                screen.blit(dice_images[die_value], (x_pos, y_pos))
+                
+                # Draw selection indicator - FIXED to properly go around the dice
+                if i in selected_dice:
+                    # Draw a border around the selected die
+                    pygame.draw.rect(screen, (255, 215, 0), (x_pos - 5, y_pos - 5, 110, 110), 4)
+                    # Optional: Add a glow effect with a semi-transparent overlay
+                    highlight = pygame.Surface((100, 100), pygame.SRCALPHA)
+                    highlight.fill((255, 215, 0, 50))  # Gold color with transparency
+                    screen.blit(highlight, (x_pos, y_pos))
+        
+        # Draw buttons 
+        button_color = (100, 160, 210)
+        hover_color = (60, 110, 150)
+        mouse_pos = pygame.mouse.get_pos()
+        
+        # Roll button
+        roll_color = hover_color if roll_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, roll_color, roll_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), roll_button, 2, border_radius=10)
+        roll_text = font.render("Roll", True, (255, 255, 255))
+        screen.blit(roll_text, (roll_button.centerx - roll_text.get_width() // 2, 
+                              roll_button.centery - roll_text.get_height() // 2))
+        
+        # Bank button
+        bank_color = hover_color if bank_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, bank_color, bank_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), bank_button, 2, border_radius=10)
+        bank_text = font.render("Bank", True, (255, 255, 255))
+        screen.blit(bank_text, (bank_button.centerx - bank_text.get_width() // 2, 
+                              bank_button.centery - bank_text.get_height() // 2))
+        
+        # Keep button
+        keep_color = hover_color if keep_button.collidepoint(mouse_pos) else button_color
+        pygame.draw.rect(screen, keep_color, keep_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), keep_button, 2, border_radius=10)
+        keep_text = font.render("Keep", True, (255, 255, 255))
+        screen.blit(keep_text, (keep_button.centerx - keep_text.get_width() // 2, 
+                              keep_button.centery - keep_text.get_height() // 2))
+        
+        # Draw message
+        if message_timer > 0:
+            message_surface = font.render(message, True, (200, 0, 0))
+            screen.blit(message_surface, (screen.get_width() // 2 - message_surface.get_width() // 2, 600))
+        
+        # Check for game over
+        if game_state['game_over']:
+            winner_screen(screen, game_state['winner'], game_state['scores'])
+            running = False
+        
+        pygame.display.flip()
+        clock.tick(60)
+             
+def winner_screen(screen, winner, scores):
+    """Display winner screen"""
+    font = get_font(72)
+    small_font = get_font(36)
+    
+    clock = pygame.time.Clock()
+    
+    continue_button = pygame.Rect(screen.get_width() // 2 - 100, 500, 200, 60)
+    
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if continue_button.collidepoint(mouse_pos):
+                    return
+        
+        # Draw
+        screen.fill((255, 235, 219))
+        
+        # Winner announcement
+        winner_text = font.render(f"{winner} WINS!", True, (50, 150, 50))
+        screen.blit(winner_text, (screen.get_width() // 2 - winner_text.get_width() // 2, 100))
+        
+        # Final scores
+        y_offset = 200
+        for i, (name, score) in enumerate(scores.items()):
+            color = (50, 150, 50) if name == winner else (30, 30, 30)
+            score_text = small_font.render(f"{name}: {score} points", True, color)
+            screen.blit(score_text, (screen.get_width() // 2 - score_text.get_width() // 2, y_offset + i * 50))
+        
+        # Continue button
+        button_color = (60, 110, 150) if continue_button.collidepoint(mouse_pos) else (100, 160, 210)
+        pygame.draw.rect(screen, button_color, continue_button, border_radius=10)
+        pygame.draw.rect(screen, (30, 30, 30), continue_button, 2, border_radius=10)
+        continue_text = small_font.render("Continue", True, (255, 255, 255))
+        screen.blit(continue_text, (continue_button.centerx - continue_text.get_width() // 2, 
+                                  continue_button.centery - continue_text.get_height() // 2))
+        
+        pygame.display.flip()
+        clock.tick(60)
 
 def run_pygame():
-    """Entry point for PyGame UI"""
-    ui = PyGameUI()
-    ui.run()
+    """Main function to run the PyGame Farkle game"""
+    screen = pygame.display.set_mode((1400, 800))
+    pygame.display.set_caption("Farkle Game")
+    
+    # Main game loop that allows returning to main menu
+    while True:
+        # Run intro screen
+        result = intro_screen(screen)
+        
+        if result == "quit":
+            break  # Exit the loop and quit the game
+            
+        if result == "play":
+            # Get number of players
+            num_players = player_count_screen(screen)
+            if num_players is None:
+                break
+
+            # Get player names
+            player_names = player_names_screen(screen, num_players)
+            if player_names is None:
+                break
+
+            # Get winning score
+            winning_score = winning_score_screen(screen)
+            if winning_score is None:
+                break
+
+            # Run main game
+            main_game_screen(screen, player_names, winning_score)
+            # After main game finishes, the loop continues and goes back to intro screen
+    
+    pygame.quit()
+
+if __name__ == "__main__":
+    run_pygame()

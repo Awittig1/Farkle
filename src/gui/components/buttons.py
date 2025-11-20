@@ -1,9 +1,16 @@
 import pygame
 
-class Button:
-    def __init__(self, x, y, width=200, height=50, text="Button", 
-                 color=(70, 130, 180), hover_color=(100, 160, 210), 
-                 text_color=(255, 255, 255), font=None):
+class Buttons:
+    def __init__(self, 
+                x: 100, 
+                y: 100, 
+                width=200, 
+                height=50, 
+                text="Button", 
+                color=(70, 130, 180), 
+                hover_color=(100, 160, 210), 
+                text_color=(255, 255, 255), 
+                font=None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
